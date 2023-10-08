@@ -30,21 +30,21 @@ pip install -r requirements.txt
 
 ## Environment Variables
 
-The following table lists the environment variables used by this application, their meanings, and default values if applicable.
+Variables without a default are required.
 
 | Variable | Meaning | Default Value |
 | --- | --- | --- |
 | `AMQP_HOST` | The hostname of the AMQP server | 'rabbitmq' |
 | `AMQP_PORT` | The port number of the AMQP server | '5672' |
 | `AMQP_QUEUE_PREFIX` | The prefix for the names of the AMQP queues | 'receipts' |
-| `S3_ACCESS_KEY_ID` | The access key ID for the S3 bucket | N/A |
-| `S3_SECRET_ACCESS_KEY` | The secret access key for the S3 bucket | N/A |
+| `S3_ACCESS_KEY_ID` | The access key ID for the S3 bucket |  |
+| `S3_SECRET_ACCESS_KEY` | The secret access key for the S3 bucket |  |
 | `S3_REGION` | The region where the S3 bucket is located | 'us-east-1' |
-| `S3_BUCKET_NAME` | The name of the S3 bucket | N/A |
-| `S3_ENDPOINT_URL` | The endpoint URL for the S3 service | N/A |
+| `S3_BUCKET_NAME` | The name of the S3 bucket |  |
+| `S3_ENDPOINT_URL` | The endpoint URL for the S3 service |  |
 | `S3_PATH` | The path within the S3 bucket where the receipts are stored | 'receipts' |
-| `AZURE_ENDPOINT_URL` | The endpoint URL for the Azure Form Recognizer service | N/A |
-| `AZURE_KEY` | The key for the Azure Form Recognizer service | N/A |
+| `AZURE_ENDPOINT_URL` | The endpoint URL for the Azure Form Recognizer service |  |
+| `AZURE_KEY` | The key for the Azure Form Recognizer service |  |
 
 ## Running the Application
 
