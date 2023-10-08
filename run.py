@@ -159,9 +159,7 @@ def analyze_receipt(file):
     }
 
     simplified_receipt_data = simplify_receipt_data(receipt_data)
-    print(simplified_receipt_data)
-
-    return receipt_data
+    return simplified_receipt_data
 
 def callback(ch, method, properties, body):
     print(f" [x] Received {body}")
