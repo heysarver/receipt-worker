@@ -4,3 +4,4 @@ python-dotenv
 azure-core
 azure-ai-formrecognizer
 asyncio
+aiohttp

@@ -5,7 +5,8 @@ import os
 import time
 
 import boto3
-from azure.ai.formrecognizer import DocumentField, AddressValue, DocumentAnalysisClient
+from azure.ai.formrecognizer import DocumentField, AddressValue
+from azure.ai.formrecognizer.aio import DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
 from dotenv import load_dotenv
 import aio_pika
@@ -120,54 +121,61 @@ async def analyze_receipt(file):
     endpoint = azure_config['endpoint_url']
     key = azure_config['key']
 
-    document_analysis_client = DocumentAnalysisClient(endpoint=endpoint, credential=AzureKeyCredential(key))
+    document_analysis_client = DocumentAnalysisClient(
+        endpoint=endpoint, credential=AzureKeyCredential(key)
+    )
 
-    with open(file, 'rb') as f:
-        poller = document_analysis_client.begin_analyze_document(
-            "prebuilt-receipt", document=f, locale="en-US"
-        )
+    async with document_analysis_client:
+        with open(file, 'rb') as f:
+            poller = document_analysis_client.begin_analyze_document(
+                "prebuilt-receipt", document=f, locale="en-US"
+            )
+            
+        analysis = await poller
 
-    analysis_task = asyncio.create_task(poller.result())
-    analysis = await analysis_task
+        print("ppppdddddddddddddddd")
+        receipt = analysis.documents[0]
 
-    receipt = analysis.documents[0]
+        items = []
 
-    items = []
+        if receipt.fields.get("Items"):
+            for idx, item in enumerate(receipt.fields.get("Items").value):
+                item_description = item.value.get("Description")
+                item_quantity = item.value.get("Quantity") or 1
+                item_total_price = item.value.get("TotalPrice")
 
-    if receipt.fields.get("Items"):
-        for idx, item in enumerate(receipt.fields.get("Items").value):
-            item_description = item.value.get("Description")
-            item_quantity = item.value.get("Quantity") or 1
-            item_total_price = item.value.get("TotalPrice")
+                item_price = item.value.get("Price") or (item_quantity == 1 and item_total_price)
 
-            item_price = item.value.get("Price") or (item_quantity == 1 and item_total_price)
+                items.append({
+                    "item_description": item_description,
+                    "item_quantity": item_quantity,
+                    "item_price": item_price,
+                    "item_total_price": item_total_price
+                })
 
-            items.append({
-                "item_description": item_description,
-                "item_quantity": item_quantity,
-                "item_price": item_price,
-                "item_total_price": item_total_price
-            })
+        print("ppppEEEEEEEE")
+        document = analysis.documents[0]
 
-    document = analysis.documents[0]
+        receipt_data = {
+            "receipt_type": document.doc_type,
+            "merchant_name": document.fields.get("MerchantName"),
+            "merchant_address": document.fields.get("MerchantAddress"),
+            "transaction_date": document.fields.get("TransactionDate"),
+            "items": items,
+            "subtotal": document.fields.get("Subtotal"),
+            "tax": document.fields.get("TotalTax"),
+            "tip": document.fields.get("Tip"),
+            "total": document.fields.get("Total")
+        }
 
-    receipt_data = {
-        "receipt_type": document.doc_type,
-        "merchant_name": document.fields.get("MerchantName"),
-        "merchant_address": document.fields.get("MerchantAddress"),
-        "transaction_date": document.fields.get("TransactionDate"),
-        "items": items,
-        "subtotal": document.fields.get("Subtotal"),
-        "tax": document.fields.get("TotalTax"),
-        "tip": document.fields.get("Tip"),
-        "total": document.fields.get("Total")
-    }
-
-    simplified_receipt_data = simplify_receipt_data(receipt_data)
-    return simplified_receipt_data
+        print("ppppFFFFFFFFFFF")
+        simplified_receipt_data = simplify_receipt_data(receipt_data)
+        print("ppppGGGGGGGGGGGG")
+        return simplified_receipt_data
 
 async def callback(message: aio_pika.IncomingMessage):
-    asyncio.create_task(process_message(message))
+    print(f" [x] Received {message.body}")
+    asyncio.ensure_future(process_message(message))
 
 async def process_message(message: aio_pika.IncomingMessage):
     print(f" [x] Received {message.body}")
@@ -176,8 +184,9 @@ async def process_message(message: aio_pika.IncomingMessage):
 
     if cmd == 'hey':
         receipt = get_s3_file(bucket=s3_config["bucket_name"], path='demo', file='kroger.jpg')
-        data = await analyze_receipt(receipt)
-
+        analyze_task = asyncio.create_task(analyze_receipt(receipt))
+        data = await analyze_task
+        
         channel = await connection.channel()
         processed_queue = await channel.declare_queue(amqp_config['processed_queue'], durable=True)
         await channel.default_exchange.publish(
