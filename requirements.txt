@@ -1,0 +1,5 @@
+boto3
+pika
+python-dotenv
+azure-core
+azure-ai-formrecognizer
