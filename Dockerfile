@@ -1,4 +1,6 @@
-FROM python:3.12-alpine
+FROM python:3.7-alpine
+
+RUN apk add --no-cache --virtual=build-dependencies build-base
 
 WORKDIR /app
 

@@ -4,6 +4,8 @@ services:
     build: ./
     env_file:
       - .env
+    depends_on:
+      - rabbitmq
 
   rabbitmq:
     image: 'rabbitmq:3.12-management-alpine'

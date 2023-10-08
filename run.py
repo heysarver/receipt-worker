@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import os
@@ -7,7 +8,7 @@ import boto3
 from azure.ai.formrecognizer import DocumentField, AddressValue, DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
 from dotenv import load_dotenv
-import pika
+import aio_pika
 
 load_dotenv()
 
@@ -43,7 +44,7 @@ azure_config = {
     "key": os.getenv('AZURE_KEY')
 }
 
-def connect_to_amqp(host, port=5672, queue: any = 'unspecified'):
+async def connect_to_amqp(host, port=5672, queue: any = 'unspecified'):
     if isinstance(queue, str):
         queue = [queue]
 
@@ -52,20 +53,23 @@ def connect_to_amqp(host, port=5672, queue: any = 'unspecified'):
     failure_count = 0
     while True:
         try:
-            connection = pika.BlockingConnection(pika.ConnectionParameters(host=host, port=port))
-            channel = connection.channel()
+            connection = await aio_pika.connect_robust(f"amqp://{host}:{port}")
+            channel = await connection.channel()
             for q in queue:
-                channel.queue_declare(queue=q, durable=True)
+                await channel.declare_queue(q, durable=True)
             print(' [*] Connected to server.')
             break
-        except pika.exceptions.AMQPConnectionError as e:
-            handle_amqp_connection_error(e, failure_count)
-            failure_count += 1
         except Exception as e:
-            print(f"Unexpected error occurred: {e}")
-            break
+            failure_count += 1
+            sleep_time = 5 + (5 * failure_count)
+            print(f' [*] Connection failed. Sleeping for {sleep_time} seconds.')
+            await asyncio.sleep(sleep_time)
+            if failure_count >= 5:
+                print(' [*] Maximum retry limit reached.')
+                raise Exception("Unable to connect after 5 attempts")
 
     return connection, channel
+
 
 def handle_amqp_connection_error(e, failure_count):
     sleep_time = 5 + (5 * failure_count)
@@ -112,18 +116,19 @@ def simplify_receipt_data(receipt_data):
     return receipt_data
 
 
-def analyze_receipt(file):
+async def analyze_receipt(file):
     endpoint = azure_config['endpoint_url']
     key = azure_config['key']
 
     document_analysis_client = DocumentAnalysisClient(endpoint=endpoint, credential=AzureKeyCredential(key))
 
-    f = open(file, 'rb')
+    with open(file, 'rb') as f:
+        poller = document_analysis_client.begin_analyze_document(
+            "prebuilt-receipt", document=f, locale="en-US"
+        )
 
-    poller = document_analysis_client.begin_analyze_document(
-        "prebuilt-receipt", document=f, locale="en-US"
-    )
-    analysis = poller.result()
+    analysis_task = asyncio.create_task(poller.result())
+    analysis = await analysis_task
 
     receipt = analysis.documents[0]
 
@@ -161,38 +166,43 @@ def analyze_receipt(file):
     simplified_receipt_data = simplify_receipt_data(receipt_data)
     return simplified_receipt_data
 
-def callback(ch, method, properties, body):
-    print(f" [x] Received {body}")
-    
-    # TODO: path, file, etc should be the payload of message, not 'hey'
-    cmd = body.decode()
+async def callback(message: aio_pika.IncomingMessage):
+    asyncio.create_task(process_message(message))
+
+async def process_message(message: aio_pika.IncomingMessage):
+    print(f" [x] Received {message.body}")
+
+    cmd = message.body.decode()
 
     if cmd == 'hey':
         receipt = get_s3_file(bucket=s3_config["bucket_name"], path='demo', file='kroger.jpg')
-        data = analyze_receipt(receipt)
-        
-        ch.queue_declare(queue=amqp_config['processed_queue'], durable=True)
-        ch.basic_publish(
-            exchange='',
-            routing_key=amqp_config['processed_queue'],
-            body=json.dumps(data),
-            properties=pika.BasicProperties(
-                delivery_mode=2,
-            ))
+        data = await analyze_receipt(receipt)
+
+        channel = await connection.channel()
+        processed_queue = await channel.declare_queue(amqp_config['processed_queue'], durable=True)
+        await channel.default_exchange.publish(
+            aio_pika.Message(body=json.dumps(data).encode()),
+            routing_key=processed_queue.name,
+        )
     else:
         print("Unknown Body:")
-        print(body)
+        print(message.body)
 
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+    # Acknowledge the message after it has been processed
+    await message.ack()
 
 
 if __name__ == '__main__':
-    connection, channel = connect_to_amqp(host=amqp_config['host'], port=amqp_config['port'], queue=[amqp_config['processed_queue'], amqp_config['unprocessed_queue']])
+    loop = asyncio.get_event_loop()
+    connection, channel = loop.run_until_complete(connect_to_amqp(host=amqp_config['host'], port=amqp_config['port'], queue=[amqp_config['processed_queue'], amqp_config['unprocessed_queue']]))
     print(' [OK] Waiting for messages...')
-    channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(queue=amqp_config['unprocessed_queue'], on_message_callback=callback)
+    
+    unprocessed_queue = loop.run_until_complete(channel.declare_queue(amqp_config['unprocessed_queue'], durable=True))
+    loop.run_until_complete(unprocessed_queue.consume(callback))
+
     try:
-        channel.start_consuming()
+        loop.run_forever()
     except KeyboardInterrupt:
-        channel.stop_consuming()
-    connection.close()
+        pass
+
+    loop.run_until_complete(connection.close())

@@ -1,5 +1,6 @@
 boto3
-pika
+aio_pika
 python-dotenv
 azure-core
 azure-ai-formrecognizer
+asyncio
