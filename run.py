@@ -25,7 +25,7 @@ s3_config = {
     "secret_access_key": os.getenv('S3_SECRET_ACCESS_KEY'),
     "region": os.getenv('S3_REGION', 'us-east-1'),
     "bucket_name": os.getenv('S3_BUCKET_NAME'),
-    "endpoint_url": os.getenv('S3_ENDPOINT_URL', ''),
+    "endpoint_url": os.getenv('S3_ENDPOINT_URL'),
     "path": os.getenv('S3_PATH', 'receipts')
 }
 
