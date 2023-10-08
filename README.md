@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 Variables without a default are required.
 
-| Variable | Meaning | Default Value |
+| Variable | Description | Default Value |
 | --- | --- | --- |
 | `AMQP_HOST` | The hostname of the AMQP server | 'rabbitmq' |
 | `AMQP_PORT` | The port number of the AMQP server | '5672' |
@@ -42,7 +42,7 @@ Variables without a default are required.
 | `S3_REGION` | The region where the S3 bucket is located | 'us-east-1' |
 | `S3_BUCKET_NAME` | The name of the S3 bucket |  |
 | `S3_ENDPOINT_URL` | The endpoint URL for the S3 service |  |
-| `S3_PATH` | The path within the S3 bucket where the receipts are stored | 'receipts' |
+| `S3_PATH` | The path within the S3 bucket where the receipts are stored without leading or trailing slashes | 'receipts' |
 | `AZURE_ENDPOINT_URL` | The endpoint URL for the Azure Form Recognizer service |  |
 | `AZURE_KEY` | The key for the Azure Form Recognizer service |  |
 
