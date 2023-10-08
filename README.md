@@ -56,6 +56,85 @@ python run.py
 
 This will start the application and it will begin listening for messages on the AMQP queue.
 
+## Processed Receipt Data
+
+The processed queue is populated with receipt data that has been analyzed and formatted. The data is published to the queue as a JSON object.
+
+### Structure of the Data
+
+```json
+{
+  "receipt_type": "<type_of_receipt>",
+  "merchant_name": {
+    "value": "<name_of_merchant>",
+    "confidence": <confidence_score>
+  },
+  "merchant_address": {
+    "value": {
+      "countryOrRegion": "<country_or_region>",
+      "streetAddress": "<street_address>",
+      "locality": "<locality>",
+      "postalCode": "<postal_code>"
+    },
+    "confidence": <confidence_score>
+  },
+  "transaction_date": {
+    "value": "<date_of_transaction>",
+    "confidence": <confidence_score>
+  },
+  "items": [
+    {
+      "item_description": {
+        "value": "<description_of_item>",
+        "confidence": <confidence_score>
+      },
+      "item_quantity": {
+        "value": <quantity_of_item>,
+        "confidence": <confidence_score>
+      },
+      "item_price": {
+        "value": <price_of_item>,
+        "confidence": <confidence_score>
+      },
+      "item_total_price": {
+        "value": <total_price_of_item>,
+        "confidence": <confidence_score>
+      }
+    },
+    ...
+  ],
+  "subtotal": {
+    "value": <subtotal_amount>,
+    "confidence": <confidence_score>
+  },
+  "tax": {
+    "value": <tax_amount>,
+    "confidence": <confidence_score>
+  },
+  "tip": {
+    "value": <tip_amount>,
+    "confidence": <confidence_score>
+  },
+  "total": {
+    "value": <total_amount>,
+    "confidence": <confidence_score>
+  }
+}
+```
+
+- `receipt_type`: The type of the receipt.
+- `merchant_name`: The name of the merchant where the transaction took place.
+- `merchant_address`: The address of the merchant. This is an object containing `countryOrRegion`, `streetAddress`, `locality`, and `postalCode`.
+- `transaction_date`: The date when the transaction occurred.
+- `items`: An array of items purchased. Each item is an object containing `item_description`, `item_quantity`, `item_price`, and `item_total_price`.
+- `subtotal`: The subtotal amount of the transaction before tax and tip.
+- `tax`: The amount of tax for the transaction.
+- `tip`: The amount of tip for the transaction.
+- `total`: The total amount of the transaction including tax and tip.
+
+Each field (except `receipt_type` and `items`) is an object containing a `value` and a `confidence` score, which represents the confidence level of the data extraction process. In the `items` array, each field in an item is also an object with a `value` and a `confidence` score.
+
+
 ## License
 
 This project is licensed under the MIT License.
