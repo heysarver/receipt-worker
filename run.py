@@ -14,11 +14,9 @@ load_dotenv()
 amqp_config = {
     "host": os.getenv('AMQP_HOST', 'rabbitmq'),
     "port": os.getenv('AMQP_PORT', '5672'),
-    "queue_prefix": os.getenv('AMQP_QUEUE_PREFIX', 'receipts')
+    "unprocessed_queue": os.getenv('AMQP_SRC_QUEUE', 'receipts_unprocessed'),
+    "processed_queue": os.getenv('AMQP_DST_QUEUE', 'receipts_processed')
 }
-
-amqp_config["processed_queue"] = f'{amqp_config["queue_prefix"]}_processed'
-amqp_config["unprocessed_queue"] = f'{amqp_config["queue_prefix"]}_unprocessed'
 
 s3_config = {
     "access_key_id": os.getenv('S3_ACCESS_KEY_ID'),
