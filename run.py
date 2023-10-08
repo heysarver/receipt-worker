@@ -40,8 +40,7 @@ s3_client = s3_session.client(
 
 azure_config = {
     "endpoint_url": os.getenv('AZURE_ENDPOINT_URL'),
-    "key": os.getenv('AZURE_KEY'),
-    "region": os.getenv('AZURE_REGION', 'eastus')
+    "key": os.getenv('AZURE_KEY')
 }
 
 def connect_to_amqp(host, port=5672, queue: any = 'unspecified'):

@@ -1,6 +1,11 @@
 # receipt-worker
 
-This project is a Python application that processes receipt images from an S3-compatible bucket, extracts data using Azure's Form Recognizer, and then sends the processed data to an AMQP queue.
+This project is a streamlined Python application that:
+
+1. Subscribes to an AMQP queue for unprocessed receipts.
+2. Downloads the corresponding receipt images from an S3-compatible bucket.
+3. Utilizes Azure's Form Recognizer to extract relevant data from the downloaded images.
+4. Publishes the processed data back to an AMQP queue.
 
 ## Getting Started
 
@@ -40,7 +45,6 @@ The following table lists the environment variables used by this application, th
 | `S3_PATH` | The path within the S3 bucket where the receipts are stored | 'receipts' |
 | `AZURE_ENDPOINT_URL` | The endpoint URL for the Azure Form Recognizer service | N/A |
 | `AZURE_KEY` | The key for the Azure Form Recognizer service | N/A |
-| `AZURE_REGION` | The region where the Azure Form Recognizer service is located | 'eastus' |
 
 ## Running the Application
 
